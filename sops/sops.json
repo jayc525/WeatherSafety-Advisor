@@ -1,0 +1,232 @@
+{
+  "version": "1.0",
+  "description": "Standard Operating Procedures for Weather Advisory Bot. Edit this file to add, modify, or remove policies without touching any code.",
+  "last_updated": "2026-10-01",
+  "severity_levels": {
+    "low": "Informational — conditions are generally fine with minor precautions",
+    "moderate": "Caution advised — adjust plans or take specific precautions",
+    "high": "Significant risk — strongly recommend avoiding or postponing the activity",
+    "critical": "Dangerous conditions — avoid all outdoor activity of this type"
+  },
+  "condition_types_reference": {
+    "threshold": "Compare a current weather field against a numeric value. Fields: temperature_2m, apparent_temperature, relative_humidity_2m, precipitation, precipitation_probability, wind_speed_10m, wind_gusts_10m, uv_index, cloud_cover. Operators: >=, >, <=, <, ==",
+    "weather_code_in": "Check if the current WMO weather code is in a list of values. Thunderstorm: [95,96,99]. Fog: [45,48]. Heavy rain: [65,82].",
+    "hourly_any": "True if ANY hour in an optional [start_hour, end_hour] window meets the threshold. Useful for UV windows, afternoon heat, etc.",
+    "hourly_consecutive": "True if at least min_hours consecutive hours meet the threshold. Useful for sustained rainfall systems.",
+    "hourly_total": "True if the SUM of a field across all hours meets the threshold. Useful for daily rainfall totals.",
+    "composite": "Multi-factor scoring for fuzzy conditions (e.g., 'is it a good day for a picnic'). Each factor gets a 0-1 score, weighted average determines the advice tier."
+  },
+  "sops": [
+    {
+      "id": "SOP-001",
+      "name": "Extreme Heat — Outdoor Exercise",
+      "category": "Outdoor Exercise",
+      "severity": "high",
+      "applies_to_activities": ["cycling", "running", "hiking", "outdoor_exercise", "walking", "swimming", "general_outdoor"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "temperature_2m", "operator": ">=", "value": 40},
+          {"type": "threshold", "field": "apparent_temperature", "operator": ">=", "value": 42}
+        ]
+      },
+      "advice": "Extreme heat conditions detected. Avoid strenuous outdoor exercise — risk of heat exhaustion and heatstroke is significant. If you must exercise outdoors, reschedule to early morning (before 7 AM) or late evening (after 7 PM), stay in shaded areas, hydrate every 15 minutes, and stop immediately if you feel dizzy, nauseous, or confused."
+    },
+    {
+      "id": "SOP-002",
+      "name": "High UV Exposure Risk",
+      "category": "Outdoor Exercise",
+      "severity": "moderate",
+      "applies_to_activities": ["cycling", "running", "hiking", "outdoor_exercise", "walking", "swimming", "picnic", "outdoor_event", "general_outdoor", "gardening", "photography", "fishing"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "uv_index", "operator": ">=", "value": 8},
+          {"type": "hourly_any", "field": "uv_index", "operator": ">=", "value": 8, "start_hour": 10, "end_hour": 16}
+        ]
+      },
+      "advice": "UV index is very high (8+). Prolonged unprotected exposure between 10 AM and 4 PM risks sunburn and long-term skin damage. Apply SPF 50+ sunscreen and reapply every 2 hours, wear UV-protective clothing, a hat, and sunglasses. Consider rescheduling outdoor activities to early morning or late evening when UV levels drop."
+    },
+    {
+      "id": "SOP-003",
+      "name": "Dangerous Winds — Cycling & Two-Wheelers",
+      "category": "Outdoor Exercise",
+      "severity": "high",
+      "applies_to_activities": ["cycling"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "wind_speed_10m", "operator": ">=", "value": 40},
+          {"type": "threshold", "field": "wind_gusts_10m", "operator": ">=", "value": 50}
+        ]
+      },
+      "advice": "Wind conditions are dangerous for cyclists and two-wheeler riders. This is a safety risk, not just a comfort issue — strong winds can destabilize you, blow you into traffic, or throw debris into your path. Postpone your ride or switch to enclosed transport (car, bus, metro). If caught in sudden gusts, dismount and wait it out."
+    },
+    {
+      "id": "SOP-004",
+      "name": "Heavy Rainfall — Travel Advisory",
+      "category": "Travel",
+      "severity": "high",
+      "applies_to_activities": ["driving", "commuting"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "precipitation", "operator": ">=", "value": 7.5},
+          {"type": "threshold", "field": "precipitation_probability", "operator": ">=", "value": 85},
+          {"type": "weather_code_in", "values": [65, 82]}
+        ]
+      },
+      "advice": "Heavy rainfall is occurring or highly likely. Road visibility will be significantly reduced, and waterlogging on low-lying routes is probable. Expect substantial delays. Avoid travel if possible; if you must travel, use main roads, keep headlights on, maintain a large following distance, drive slowly through standing water, and check local traffic and flood advisories before departure."
+    },
+    {
+      "id": "SOP-005",
+      "name": "Moderate Rain — Travel Preparedness",
+      "category": "Travel",
+      "severity": "moderate",
+      "applies_to_activities": ["driving", "commuting"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "AND",
+        "rules": [
+          {"type": "threshold", "field": "precipitation_probability", "operator": ">=", "value": 60},
+          {"type": "threshold", "field": "precipitation", "operator": ">=", "value": 2.0}
+        ]
+      },
+      "advice": "Rain is likely and already measurable. Roads may be wet and slightly slippery. Carry rain gear, allow 15–20 minutes extra travel time, drive cautiously (especially on turns and bridges), and check for local weather alerts before departing. Not a reason to cancel travel, but a reason to prepare for it."
+    },
+    {
+      "id": "SOP-006",
+      "name": "Extreme Heat — Children & Elderly Safety",
+      "category": "Vulnerable Groups",
+      "severity": "critical",
+      "applies_to_activities": [],
+      "applies_to_vulnerable_groups": ["children", "elderly", "infants"],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "temperature_2m", "operator": ">=", "value": 38},
+          {"type": "threshold", "field": "apparent_temperature", "operator": ">=", "value": 40}
+        ]
+      },
+      "advice": "CRITICAL: Extreme heat poses serious, potentially life-threatening risks to children and elderly individuals. Their bodies regulate heat less effectively. Do NOT take children or elderly persons outdoors for any extended period. Ensure they stay in air-conditioned or well-ventilated spaces with constant access to water. If brief outdoor exposure is unavoidable (e.g., getting to a car), limit it to under 5 minutes, use shade, and watch for signs of heat illness: confusion, rapid pulse, hot/dry skin, or loss of consciousness."
+    },
+    {
+      "id": "SOP-007",
+      "name": "Cold Weather — Pet Safety",
+      "category": "Vulnerable Groups",
+      "severity": "high",
+      "applies_to_activities": [],
+      "applies_to_vulnerable_groups": ["pets"],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "threshold", "field": "temperature_2m", "operator": "<=", "value": 5},
+          {"type": "threshold", "field": "apparent_temperature", "operator": "<=", "value": 0}
+        ]
+      },
+      "advice": "Temperatures are dangerously cold for most pets. Small breeds, short-haired dogs, puppies, kittens, and senior animals are especially vulnerable to hypothermia and frostbite. Limit outdoor time to brief bathroom breaks (under 10 minutes). Provide warm, dry shelter. Consider pet boots to protect paws from ice and salt. If your pet shivers, lifts paws, or seems reluctant to walk, bring them inside immediately."
+    },
+    {
+      "id": "SOP-008",
+      "name": "Outdoor Leisure Suitability Assessment",
+      "category": "Leisure & Recreation",
+      "severity": "variable",
+      "applies_to_activities": ["picnic", "outdoor_event", "gardening", "photography", "fishing"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "COMPOSITE",
+        "rules": [
+          {
+            "type": "composite",
+            "factors": [
+              {"field": "precipitation_probability", "weight": 0.30, "scoring": "lower_better", "good_below": 20, "bad_above": 60},
+              {"field": "precipitation", "weight": 0.10, "scoring": "lower_better", "good_below": 0.5, "bad_above": 5.0},
+              {"field": "wind_speed_10m", "weight": 0.20, "scoring": "lower_better", "good_below": 15, "bad_above": 35},
+              {"field": "temperature_2m", "weight": 0.25, "scoring": "range", "good_min": 18, "good_max": 32, "bad_below": 8, "bad_above": 42},
+              {"field": "uv_index", "weight": 0.15, "scoring": "lower_better", "good_below": 5, "bad_above": 10}
+            ],
+            "thresholds": {"good_above": 0.7, "caution_above": 0.4}
+          }
+        ]
+      },
+      "advice_good": "Current weather conditions look favorable for outdoor leisure! Temperature is comfortable, rain risk is low, and winds are gentle. A good day to enjoy time outdoors. Bring sunscreen if you'll be out for extended periods, and pack water to stay hydrated.",
+      "advice_caution": "Weather conditions are mixed for outdoor leisure. Some factors are less than ideal — you may encounter uncomfortable temperatures, breezy conditions, or some chance of rain. Consider having a backup indoor plan, bringing weather-appropriate gear (umbrella, layers), and keeping an eye on conditions as the day progresses.",
+      "advice_bad": "Current weather conditions are not well-suited for outdoor leisure activities. Multiple weather factors are unfavorable — you're likely to face uncomfortable or unpleasant conditions. We recommend postponing to a better day or moving your plans to an indoor venue.",
+      "advice": "See advice_good / advice_caution / advice_bad based on composite score."
+    },
+    {
+      "id": "SOP-009",
+      "name": "Thunderstorm & Severe Weather — Universal Safety",
+      "category": "General Safety",
+      "severity": "critical",
+      "applies_to_activities": [],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "weather_code_in", "values": [95, 96, 99]},
+          {
+            "type": "threshold",
+            "field": "wind_gusts_10m",
+            "operator": ">=",
+            "value": 60
+          }
+        ]
+      },
+      "advice": "CRITICAL: Severe weather detected — thunderstorm activity and/or extreme wind gusts in your area. ALL outdoor activities should be cancelled or postponed. Lightning strikes are the primary danger — seek shelter inside a substantial building or a hard-topped vehicle immediately. Do NOT shelter under isolated trees, near metal fences, or in open structures like gazebos. Stay indoors until the storm passes and official all-clear is given. Monitor local emergency services for updates."
+    },
+    {
+      "id": "SOP-010",
+      "name": "Fog & Low Visibility — Driving Advisory",
+      "category": "Travel",
+      "severity": "moderate",
+      "applies_to_activities": ["driving", "commuting"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "weather_code_in", "values": [45, 48]},
+          {"type": "hourly_any", "field": "weather_code", "operator": "==", "value": 45},
+          {"type": "hourly_any", "field": "weather_code", "operator": "==", "value": 48}
+        ]
+      },
+      "advice": "Foggy conditions detected — visibility is significantly reduced. If driving: use LOW-beam headlights (high beams reflect off fog and make visibility worse), reduce speed well below the limit, maintain at least double your normal following distance, and use road markings as a guide. Consider delaying travel until visibility improves, especially on highways and unfamiliar routes. If visibility drops below 50 meters, pull over safely and wait."
+    },
+    {
+      "id": "SOP-011",
+      "name": "Heat & Humidity — Exercise Intensity Warning",
+      "category": "Outdoor Exercise",
+      "severity": "moderate",
+      "applies_to_activities": ["running", "outdoor_exercise", "cycling", "hiking", "walking", "general_outdoor"],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "AND",
+        "rules": [
+          {"type": "threshold", "field": "relative_humidity_2m", "operator": ">=", "value": 75},
+          {"type": "threshold", "field": "temperature_2m", "operator": ">=", "value": 30}
+        ]
+      },
+      "advice": "High humidity combined with elevated temperatures significantly reduces your body's ability to cool itself through sweating. The risk of heat-related illness (heat exhaustion, cramps) is elevated even for fit individuals. Reduce exercise intensity by 30–50% compared to what you'd normally do, take 5-minute shade breaks every 15–20 minutes, hydrate with electrolyte-rich fluids (not just water), and wear light, breathable clothing. If you feel dizzy or nauseous, stop immediately and cool down."
+    },
+    {
+      "id": "SOP-012",
+      "name": "Sustained Heavy Rainfall System — Universal Advisory",
+      "category": "General Safety",
+      "severity": "critical",
+      "applies_to_activities": [],
+      "applies_to_vulnerable_groups": [],
+      "conditions": {
+        "logic": "OR",
+        "rules": [
+          {"type": "hourly_consecutive", "field": "precipitation", "operator": ">=", "value": 5.0, "min_hours": 3},
+          {"type": "hourly_total", "field": "precipitation", "operator": ">=", "value": 50}
+        ]
+      },
+      "advice": "CRITICAL: A sustained heavy rainfall system is affecting your area. This is not a passing shower — prolonged heavy rain dramatically increases risks of urban flooding, waterlogging, road cave-ins, and infrastructure disruption that cut across ALL outdoor activities. Avoid all non-essential outdoor activity. Do not attempt to walk or drive through flooded areas — even shallow-looking water can be deep enough to sweep away a vehicle. Monitor local authorities for flood warnings, road closures, and evacuation notices. Keep emergency contacts accessible."
+    }
+  ]
+}
