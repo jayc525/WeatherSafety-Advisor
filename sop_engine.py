@@ -5,6 +5,7 @@ Loads SOPs from the JSON file, evaluates each SOP's conditions
 against the actual weather data, and returns a list of matched SOPs.
 """
 
+from langchain_core.outputs import chat_generation
 import json
 from pathlib import Path
 from datetime import datetime
@@ -37,6 +38,7 @@ def _compare(actual, operator: str, threshold) -> bool:
     fn = ops.get(operator)
     return fn(actual, threshold) if fn else False
 
+#Used by: SOP-001 (extreme heat), SOP-003 (high wind), SOP-006 (elderly/child heat)
 
 def _eval_threshold(rule: dict, weather: dict) -> bool:
     """Compare a current weather field against a threshold value."""
@@ -46,6 +48,7 @@ def _eval_threshold(rule: dict, weather: dict) -> bool:
         return False
     return _compare(value, rule["operator"], rule["value"])
 
+#Used by: SOP-009 (thunderstorm), SOP-010 (fog), SOP-004 (heavy rain)
 
 def _eval_weather_code_in(rule: dict, weather: dict) -> bool:
     """Check if current weather code is in a set of WMO codes."""
@@ -55,6 +58,7 @@ def _eval_weather_code_in(rule: dict, weather: dict) -> bool:
         return False
     return code in rule["values"]
 
+#Used by: SOP-002 (UV peak hours)
 
 def _eval_hourly_any(rule: dict, weather: dict) -> bool:
     """True if ANY hour in the optional [start_hour, end_hour] window meets the threshold."""
@@ -76,6 +80,7 @@ def _eval_hourly_any(rule: dict, weather: dict) -> bool:
                 return True
     return False
 
+#Used by: SOP-012 (sustained heavy rainfall)
 
 def _eval_hourly_consecutive(rule: dict, weather: dict) -> bool:
     """True if at least min_hours consecutive hours meet the threshold."""
@@ -93,6 +98,7 @@ def _eval_hourly_consecutive(rule: dict, weather: dict) -> bool:
             consecutive = 0
     return False
 
+#Used by: SOP-012 (total daily rainfall)
 
 def _eval_hourly_total(rule: dict, weather: dict) -> bool:
     """True if the SUM of a field across all hours meets the threshold."""
@@ -123,6 +129,8 @@ def evaluate_condition(rule: dict, weather: dict) -> bool:
 # ─────────────────────────────────────────────────────────────
 # Composite / fuzzy evaluation
 # ─────────────────────────────────────────────────────────────
+
+#Used for SOP-008 (Picnic Suitability).
 
 def evaluate_composite(sop: dict, weather: dict) -> dict | None:
     """
