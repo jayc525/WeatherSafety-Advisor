@@ -6,7 +6,44 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from state import BotState
 import nodes
+from langchain_groq import ChatGroq
+import os
 
+
+def get_llm():
+    """Initialize the LLM. Using Groq API."""
+    return ChatGroq(
+        api_key=os.getenv("GROQ_API_KEY"),
+        model="openai/gpt-oss-120b",
+        temperature=0
+    )
+
+llm=get_llm()
+
+def route_initial(state_dict: BotState) -> str:
+    messages = state_dict.get("messages", [])
+    if not messages:
+        return "extract_intent"
+        
+    qwery = messages[-1].content
+
+    responses = llm.invoke(
+        f"""
+        Determine whether the following user message is a simple greeting (like hi, hello, hey, good morning)
+        OR if it's asking a question or requesting weather/safety info.
+
+        user message: "{qwery}"
+
+        return ONLY the word "greeting" if it is just a greeting.
+        return ONLY the word "intent" if they are asking something.
+        """
+    )
+    result = responses.content.strip().lower()
+
+    if "greeting" in result:
+        return "handle_greeting"
+
+    return "extract_intent"
 
 def route_after_intent(state_dict: BotState) -> str:
     """Route after intent extraction."""
@@ -36,6 +73,7 @@ def build_graph():
     workflow = StateGraph(BotState)
     
     # Add nodes
+    workflow.add_node("handle_greeting", nodes.handle_greeting)
     workflow.add_node("extract_intent", nodes.extract_intent)
     workflow.add_node("resolve_location", nodes.resolve_location)
     workflow.add_node("fetch_weather", nodes.fetch_weather)
@@ -43,9 +81,14 @@ def build_graph():
     workflow.add_node("compose_response", nodes.compose_response)
     workflow.add_node("handle_failure", nodes.handle_failure)
     
-    # Set entry point
-    workflow.set_entry_point("extract_intent")
-    
+    # Set conditional entry point
+    workflow.set_conditional_entry_point(
+        route_initial,
+        {
+            "handle_greeting": "handle_greeting",
+            "extract_intent": "extract_intent"
+        }
+    )
     # Add conditional edges
     workflow.add_conditional_edges(
         "extract_intent",
@@ -79,6 +122,7 @@ def build_graph():
     
     # End points
     workflow.add_edge("compose_response", END)
+    workflow.add_edge("handle_greeting", END)
     workflow.add_edge("handle_failure", END)
     
     # Compile with memory (for session management)

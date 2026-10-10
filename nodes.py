@@ -21,6 +21,14 @@ def get_llm():
     )
 
 
+def handle_greeting(state_dict: state.BotState) -> dict:
+    """Respond to a simple greeting."""
+    msg = AIMessage(content="Hello! I'm the Weather Safety Advisor. How can I help you with your outdoor plans today?")
+    return {"messages": [msg]}
+
+
+
+
 def extract_intent(state_dict: state.BotState) -> dict:
     """
     Extract structured intent from the user's query and conversation history.
